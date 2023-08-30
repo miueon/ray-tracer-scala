@@ -1,6 +1,9 @@
 package com.example
 
-case class Ray(origin: Point3, direction: Vec3)
+import vec3.*
+import vec3.given
+
+case class Ray(origin: Vec3, direction: Vec3)
 object Ray:
-  extension (r: Ray)
-    def at(t: Double): Point3 = r.origin + r.direction.*(t)
+  extension (r: Ray)(using ops: Vec3Ops[Vec3])
+    def at(t: Double): Vec3 = r.origin + t *: r.direction
