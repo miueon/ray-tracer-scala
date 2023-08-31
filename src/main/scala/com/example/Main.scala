@@ -40,20 +40,10 @@ object Render extends IOApp.Simple:
     )
   )
 
-  // def hitSphere(center: Vec3, radius: Double, ray: Ray): Double =
-  //   val oc = ray.origin - center
-  //   val a = ray.direction.lengthSquared
-  //   val halfB = oc dot ray.direction
-  //   val c = oc.lengthSquared - radius * radius
-  //   val discriminant = halfB * halfB - a * c
-
-  //   if discriminant < 0 then -1.0
-  //   else (-halfB - math.sqrt(discriminant)) / a
-
   def rayColor(r: Ray, world: HittableObject)(using
       hittable: Hittable[HittableObject]
   ): Color =
-    world.hit(r, 0, Double.PositiveInfinity) match
+    world.hit(r, Interval(0, Double.PositiveInfinity)) match
       case Some(rec) => Color(0.5 *: (rec.normal + Vec3(1, 1, 1)))
       case None =>
         val unitDirection = r.direction.unitVector

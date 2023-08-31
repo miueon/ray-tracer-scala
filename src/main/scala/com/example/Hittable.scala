@@ -2,6 +2,7 @@ package com.example.hittable
 
 import com.example.vec3.Vec3
 import com.example.Ray
+import com.example.Interval
 
 case class HitRecord(p: Vec3, normal: Vec3, t: Double, frontFace: Boolean)
 object HitRecord:
@@ -11,8 +12,7 @@ object HitRecord:
     HitRecord(hitPoint, normal, t, frontFace)
 
 trait Hittable[A]:
-  extension (self: A)
-    def hit(r: Ray, rayTmin: Double, rayTmax: Double): Option[HitRecord]
+  extension (self: A) def hit(r: Ray, rayT: Interval): Option[HitRecord]
 
 enum HittableObject:
   case Sphere(center: Vec3, radius: Double)
@@ -25,8 +25,7 @@ object HittableObject:
     extension (self: Sphere)
       override def hit(
           r: Ray,
-          rayTmin: Double,
-          rayTmax: Double
+          rayT: Interval
       ): Option[HitRecord] =
         val oc = r.origin - self.center
         val a = r.direction.lengthSquared
@@ -43,31 +42,31 @@ object HittableObject:
           val outwardNormal = (p - self.center) / self.radius
           Some(HitRecord(p, outwardNormal, root))
         if discriminant < 0 then None
-        else if (root1 > rayTmin && root1 < rayTmax) then mkHitRecord(root1)
-        else if (root2 > rayTmin && root2 < rayTmax) then mkHitRecord(root2)
+        else if (rayT.surrounds(root1)) then mkHitRecord(root1)
+        else if (rayT.surrounds(root2)) then mkHitRecord(root2)
         else None
   given HListHittable: Hittable[HList] with
     extension (self: HList)
       override def hit(
           r: Ray,
-          rayTmin: Double,
-          rayTmax: Double
+          rayT: Interval
       ): Option[HitRecord] =
         self.hitables.foldLeft(Option.empty[HitRecord]) {
           (acc, hittableObject) =>
             acc match
               case Some(hitRecord) =>
-                hittableObject.hit(r, rayTmin, hitRecord.t).orElse(Some(hitRecord))
+                hittableObject
+                  .hit(r, Interval(rayT.min, hitRecord.t))
+                  .orElse(Some(hitRecord))
               case None =>
-                hittableObject.hit(r, rayTmin, rayTmax)
+                hittableObject.hit(r, rayT)
         }
   given ObjectHittable: Hittable[HittableObject] with
     extension (self: HittableObject)
       def hit(
           r: Ray,
-          rayTmin: Double,
-          rayTmax: Double
+          rayT: Interval
       ): Option[HitRecord] =
         self match
-          case s: Sphere => summon[Hittable[Sphere]].hit(s)(r, rayTmin, rayTmax)
-          case h: HList  => summon[Hittable[HList]].hit(h)(r, rayTmin, rayTmax)
+          case s: Sphere => summon[Hittable[Sphere]].hit(s)(r, rayT)
+          case h: HList  => summon[Hittable[HList]].hit(h)(r, rayT)
