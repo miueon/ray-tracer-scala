@@ -7,6 +7,8 @@ import cats.syntax.all.toTraverseOps
 import cats.instances.ListInstances
 import com.example.vec3.*
 import com.example.vec3.given
+import com.example.hittable.HittableObject
+import com.example.hittable.Hittable
 
 object Render extends IOApp.Simple:
   val imageRatio = 16.0 / 9.0
@@ -31,33 +33,41 @@ object Render extends IOApp.Simple:
 
   val pixel100Loc = viewportUpperLeft + 0.5 *: (pixelDeltaU + pixelDeltaV)
 
-  def hitSphere(center: Vec3, radius: Double, ray: Ray): Double =
-    val oc = ray.origin - center
-    val a = ray.direction.lengthSquared
-    val halfB = oc dot ray.direction
-    val c = oc.lengthSquared - radius * radius
-    val discriminant = halfB * halfB - a * c
+  val world = HittableObject.HList(
+    List(
+      HittableObject.Sphere(Vec3(0, 0, -1), 0.5),
+      HittableObject.Sphere(Vec3(0, -100.5, -1), 100)
+    )
+  )
 
-    if discriminant < 0 then -1.0
-    else (-halfB - math.sqrt(discriminant)) / a
+  // def hitSphere(center: Vec3, radius: Double, ray: Ray): Double =
+  //   val oc = ray.origin - center
+  //   val a = ray.direction.lengthSquared
+  //   val halfB = oc dot ray.direction
+  //   val c = oc.lengthSquared - radius * radius
+  //   val discriminant = halfB * halfB - a * c
 
-  def rayColor(r: Ray): Color =
-    val t = hitSphere(Vec3(0, 0, -1), 0.5, r)
-    if t > 0.0 then
-      val N = (r.at(t) - Vec3(0, 0, -1)).unitVector
-      0.5 *: Color(N.x + 1, N.y + 1, N.z + 1)
-    else
-      val unitDirection = r.direction.unitVector
-      val a = 0.5 * (unitDirection.y + 1.0)
-      val color = (1.0 - a) *: Color(1.0, 1.0, 1.0) + a *: Color(0.5, 0.7, 1.0)
-      color
+  //   if discriminant < 0 then -1.0
+  //   else (-halfB - math.sqrt(discriminant)) / a
+
+  def rayColor(r: Ray, world: HittableObject)(using
+      hittable: Hittable[HittableObject]
+  ): Color =
+    world.hit(r, 0, Double.PositiveInfinity) match
+      case Some(rec) => Color(0.5 *: (rec.normal + Vec3(1, 1, 1)))
+      case None =>
+        val unitDirection = r.direction.unitVector
+        val a = 0.5 * (unitDirection.y + 1.0)
+        val color =
+          (1.0 - a) *: Color(1.0, 1.0, 1.0) + a *: Color(0.5, 0.7, 1.0)
+        color
 
   def renderPixel(i: Int, j: Int): IO[Unit] =
     val pixelCenter = pixel100Loc + (i *: pixelDeltaU) + (j *: pixelDeltaV)
     val rayDirection = pixelCenter - cameraCenter
     val ray = Ray(cameraCenter, rayDirection)
 
-    val pixelColor = rayColor(ray)
+    val pixelColor = rayColor(ray, world)
     pixelColor.writeColor
 
   def renderCol(j: Int): IO[Unit] =

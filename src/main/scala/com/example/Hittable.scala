@@ -57,7 +57,7 @@ object HittableObject:
           (acc, hittableObject) =>
             acc match
               case Some(hitRecord) =>
-                hittableObject.hit(r, rayTmin, hitRecord.t)
+                hittableObject.hit(r, rayTmin, hitRecord.t).orElse(Some(hitRecord))
               case None =>
                 hittableObject.hit(r, rayTmin, rayTmax)
         }
