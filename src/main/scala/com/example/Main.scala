@@ -20,5 +20,5 @@ object Render extends IOApp.Simple:
   )
 
   def run: IO[Unit] =
-    val cam = Camera(16.0 / 9.0, 400)
+    val cam = Camera(16.0 / 9.0, 400, 100)
     cam.render(world)

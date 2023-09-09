@@ -14,3 +14,8 @@ object Interval:
 
     def surrounds(x: Double): Boolean =
       x > self.min && x < self.max
+
+    def clamp(x: Double): Double = 
+      if x < self.min then self.min
+      else if x > self.max then self.max
+      else x

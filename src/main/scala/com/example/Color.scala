@@ -9,16 +9,19 @@ opaque type Color = Vec3
 
 object Color:
   val base = 255.99
+  val intensity = Interval(0.0, 0.999)
   def apply(v: Vec3): Color = v
   def apply(x: Double, y: Double, z: Double): Color = Vec3(x, y, z)
+  private def colorBased(x: Double) = x * base
   extension (self: Color)
-    def r = self.x * base
-    def g = self.y * base
-    def b = self.z * base
 
     def value: Vec3 = self
-    def writeColor: IO[Unit] = IO {
-      println(s"${r} ${g} ${b}")
+    def writeColor(samplePerPixel: Int): IO[Unit] = IO {
+      val scale = 1.0 / samplePerPixel
+      val r = self.x * scale
+      val g = self.y * scale
+      val b = self.z * scale
+      println(s"${colorBased(r)} ${colorBased(g)} ${colorBased(b)}")
     }
 
   given colorVecOps: Vec3Ops[Color] = vec3Ops
