@@ -13,6 +13,7 @@ object Color:
   def apply(v: Vec3): Color = v
   def apply(x: Double, y: Double, z: Double): Color = Vec3(x, y, z)
   private def colorBased(x: Double) = x * base
+  def colorBasedWithGamma(x: Double) = math.sqrt(x) * base
   extension (self: Color)
 
     def value: Vec3 = self
@@ -21,7 +22,9 @@ object Color:
       val r = self.x * scale
       val g = self.y * scale
       val b = self.z * scale
-      println(s"${colorBased(r)} ${colorBased(g)} ${colorBased(b)}")
+      println(
+        s"${colorBasedWithGamma(r)} ${colorBasedWithGamma(g)} ${colorBasedWithGamma(b)}"
+      )
     }
 
   given colorVecOps: Vec3Ops[Color] = vec3Ops

@@ -7,11 +7,16 @@ import com.example.vec3.Vec3
 import cats.syntax.foldable
 import cats.syntax.all.toTraverseOps
 import com.example.Common.randomDouble
+import com.example.vec3.Vec3.randomOnHemisphere
+import com.example.hittable.HitRecord
+import scala.annotation.tailrec
+import com.example.vec3.Vec3.randomUnitVector
 
 case class Camera(
     imageRatio: Double,
     imageWidth: Int,
     samplesPerPixel: Int,
+    maxDepth: Int,
     imageHeight: Int,
     center: Vec3,
     pixel100Loc: Vec3,
@@ -23,7 +28,8 @@ object Camera:
   def apply(
       imageRatio: Double,
       imageWidth: Int,
-      samplePerPixel: Int = 10
+      samplePerPixel: Int = 10,
+      maxDepth: Int = 10
   ): Camera =
     val imageHeight = (imageWidth / imageRatio).toInt
     val center = Vec3(0, 0, 0)
@@ -45,6 +51,7 @@ object Camera:
       imageRatio,
       imageWidth,
       samplePerPixel,
+      maxDepth,
       imageHeight,
       center,
       pixel100Loc,
@@ -81,7 +88,7 @@ object Camera:
       val samplePixel = (0 until self.samplesPerPixel).toList
         .map(_ => {
           val r = getRay(i, j)
-          val pixelColor = rayColor(r, world)
+          val pixelColor = rayColor(r, world, 1.0, self.maxDepth)
           pixelColor
         })
         .foldLeft(Color(0, 0, 0))(_ + _)
@@ -109,14 +116,33 @@ object Camera:
       val rayDirection = pixelSample - rayOrigin
       Ray(rayOrigin, rayDirection)
 
-  private def rayColor(r: Ray, world: HittableObject)(using
+  @tailrec
+  private def rayColor(
+      r: Ray,
+      world: HittableObject,
+      factor: Double,
+      depth: Int,
+      renderedColor: Color = Color(1, 1, 1)
+  )(using
       hittable: Hittable[HittableObject]
   ): Color =
-    world.hit(r, Interval(0, Double.PositiveInfinity)) match
-      case Some(rec) => Color(0.5 *: (rec.normal + Vec3(1, 1, 1)))
-      case None =>
-        val unitDirection = r.direction.unitVector
-        val a = 0.5 * (unitDirection.y + 1.0)
-        val color =
-          (1.0 - a) *: Color(1.0, 1.0, 1.0) + a *: Color(0.5, 0.7, 1.0)
-        color
+    import com.example.Material.* 
+    import com.example.Material.given
+    if depth <= 0 then Color(0, 0, 0)
+    else
+      world.hit(r, Interval(0.001, Double.PositiveInfinity)) match
+        case Some((rec, material:Material)) => {
+          val scatter: Option[(Ray, Color)] = material.scatter(r, rec)
+          scatter match
+            case Some((scattered, attenuation)) =>
+              rayColor(scattered, world, 0.5 * factor, depth - 1, attenuation)
+            case None => Color(0, 0, 0)
+          // val direction = rec.normal + randomUnitVector()
+          // rayColor(Ray(rec.p, direction), world, 0.5 * factor, depth - 1)
+        }
+        case None =>
+          val unitDirection = r.direction.unitVector
+          val a = 0.5 * (unitDirection.y + 1.0)
+          val color =
+            (1.0 - a) *: Color(1.0, 1.0, 1.0) + a *: Color(0.5, 0.7, 1.0)
+          color * factor * renderedColor

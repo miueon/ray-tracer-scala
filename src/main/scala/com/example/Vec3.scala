@@ -1,6 +1,8 @@
 package com.example.vec3
 
 import cats.effect.IO
+import com.example.Common.randomDouble
+import cats.instances.lazyList
 
 case class Vec3(x: Double, y: Double, z: Double)
 
@@ -18,8 +20,32 @@ trait Vec3Ops[A]:
     def cross(b: A): A
     def unitVector: A
 object Vec3:
+  def random() = Vec3(randomDouble(), randomDouble(), randomDouble())
+  def random(min: Double, max: Double) =
+    Vec3(randomDouble(min, max), randomDouble(min, max), randomDouble(min, max))
+
+  def randomInUnitSphere() =
+    LazyList
+      .continually(random(-1.0, 1.0))
+      .find(_.lengthSquared < 1.0)
+      .get
+
+  inline def randomUnitVector() =
+    randomInUnitSphere().unitVector
+
+  inline def randomOnHemisphere(normal: Vec3) =
+    val onUnitSphere = randomUnitVector()
+    if onUnitSphere.dot(normal) > 0.0 then onUnitSphere
+    else -onUnitSphere
+
   extension (self: Vec3)
     def unary_- : Vec3 = Vec3(-self.x, -self.y, -self.z)
+    def nearZero() =
+      val s = 1e-8
+      (self.x < s) && (self.y < s) && (self.z < s)
+
+    def reflect(n: Vec3) = self - 2.0 *: self.dot(n) *: n
+
   given vec3Ops: Vec3Ops[Vec3] with
     extension (c: Double) def *:(b: Vec3): Vec3 = b * c
     extension (self: Vec3)

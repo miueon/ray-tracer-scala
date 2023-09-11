@@ -3,6 +3,7 @@ package com.example.hittable
 import com.example.vec3.Vec3
 import com.example.Ray
 import com.example.Interval
+import com.example.Material
 
 case class HitRecord(p: Vec3, normal: Vec3, t: Double, frontFace: Boolean)
 object HitRecord:
@@ -12,10 +13,11 @@ object HitRecord:
     HitRecord(hitPoint, normal, t, frontFace)
 
 trait Hittable[A]:
-  extension (self: A) def hit(r: Ray, rayT: Interval): Option[HitRecord]
+  extension (self: A)
+    def hit(r: Ray, rayT: Interval): Option[(HitRecord, Material)]
 
 enum HittableObject:
-  case Sphere(center: Vec3, radius: Double)
+  case Sphere(center: Vec3, radius: Double, material: Material)
   case HList(hitables: List[HittableObject])
 
 object HittableObject:
@@ -26,7 +28,7 @@ object HittableObject:
       override def hit(
           r: Ray,
           rayT: Interval
-      ): Option[HitRecord] =
+      ): Option[(HitRecord, Material)] =
         val oc = r.origin - self.center
         val a = r.direction.lengthSquared
         val halfB = oc.dot(r.direction)
@@ -37,10 +39,10 @@ object HittableObject:
         val root1 = (-halfB - sqrtd) / a
         val root2 = (-halfB + sqrtd) / a
 
-        def mkHitRecord(root: Double): Option[HitRecord] =
+        def mkHitRecord(root: Double): Option[(HitRecord, Material)] =
           val p = r.at(root)
           val outwardNormal = (p - self.center) / self.radius
-          Some(HitRecord(p, outwardNormal, root))
+          Some((HitRecord(p, outwardNormal, root), self.material))
         if discriminant < 0 then None
         else if (rayT.surrounds(root1)) then mkHitRecord(root1)
         else if (rayT.surrounds(root2)) then mkHitRecord(root2)
@@ -50,14 +52,14 @@ object HittableObject:
       override def hit(
           r: Ray,
           rayT: Interval
-      ): Option[HitRecord] =
-        self.hitables.foldLeft(Option.empty[HitRecord]) {
+      ): Option[(HitRecord, Material)] =
+        self.hitables.foldLeft(Option.empty[(HitRecord, Material)]) {
           (acc, hittableObject) =>
             acc match
-              case Some(hitRecord) =>
+              case Some((hitRecord, material)) =>
                 hittableObject
                   .hit(r, Interval(rayT.min, hitRecord.t))
-                  .orElse(Some(hitRecord))
+                  .orElse(Some((hitRecord, material)))
               case None =>
                 hittableObject.hit(r, rayT)
         }
@@ -66,7 +68,7 @@ object HittableObject:
       def hit(
           r: Ray,
           rayT: Interval
-      ): Option[HitRecord] =
+      ): Option[(HitRecord, Material)] =
         self match
           case s: Sphere => summon[Hittable[Sphere]].hit(s)(r, rayT)
           case h: HList  => summon[Hittable[HList]].hit(h)(r, rayT)
