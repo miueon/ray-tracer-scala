@@ -88,7 +88,7 @@ object Camera:
       val samplePixel = (0 until self.samplesPerPixel).toList
         .map(_ => {
           val r = getRay(i, j)
-          val pixelColor = rayColor(r, world, 1.0, self.maxDepth)
+          val pixelColor = rayColor(r, world, self.maxDepth, Color(1.0, 1.0, 1.0))
           pixelColor
         })
         .foldLeft(Color(0, 0, 0))(_ + _)
@@ -120,22 +120,22 @@ object Camera:
   private def rayColor(
       r: Ray,
       world: HittableObject,
-      factor: Double,
+      // factor: Double,
       depth: Int,
       renderedColor: Color = Color(1, 1, 1)
   )(using
       hittable: Hittable[HittableObject]
   ): Color =
-    import com.example.Material.* 
+    import com.example.Material.*
     import com.example.Material.given
     if depth <= 0 then Color(0, 0, 0)
     else
       world.hit(r, Interval(0.001, Double.PositiveInfinity)) match
-        case Some((rec, material:Material)) => {
+        case Some((rec, material: Material)) => {
           val scatter: Option[(Ray, Color)] = material.scatter(r, rec)
           scatter match
             case Some((scattered, attenuation)) =>
-              rayColor(scattered, world, 0.5 * factor, depth - 1, attenuation)
+              rayColor(scattered, world, depth - 1, attenuation * renderedColor) 
             case None => Color(0, 0, 0)
           // val direction = rec.normal + randomUnitVector()
           // rayColor(Ray(rec.p, direction), world, 0.5 * factor, depth - 1)
@@ -145,4 +145,4 @@ object Camera:
           val a = 0.5 * (unitDirection.y + 1.0)
           val color =
             (1.0 - a) *: Color(1.0, 1.0, 1.0) + a *: Color(0.5, 0.7, 1.0)
-          color * factor * renderedColor
+          color * renderedColor

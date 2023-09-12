@@ -19,9 +19,9 @@ object Color:
     def value: Vec3 = self
     def writeColor(samplePerPixel: Int): IO[Unit] = IO {
       val scale = 1.0 / samplePerPixel
-      val r = self.x * scale
-      val g = self.y * scale
-      val b = self.z * scale
+      val r = intensity.clamp(self.x * scale)
+      val g = intensity.clamp(self.y * scale)
+      val b = intensity.clamp(self.z * scale)
       println(
         s"${colorBasedWithGamma(r)} ${colorBasedWithGamma(g)} ${colorBasedWithGamma(b)}"
       )
